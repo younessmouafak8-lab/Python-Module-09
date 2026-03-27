@@ -1,6 +1,10 @@
-from datetime import datetime
-from pydantic import BaseModel, Field, model_validator, ValidationError
-from enum import Enum
+try:
+    from datetime import datetime
+    from pydantic import BaseModel, Field, model_validator, ValidationError
+    from enum import Enum
+except (ImportError, ModuleNotFoundError):
+    print("pydantic needs to be installed")
+    exit(1)
 
 
 class Rank(Enum):
@@ -27,12 +31,12 @@ class SpaceMission(BaseModel):
     destination: str = Field(min_length=3, max_length=50)
     launch_date: datetime
     duration_days: int = Field(ge=1, le=3650)
-    crew: list = Field(min_length=1, max_length=12)
+    crew: list[CrewMember] = Field(min_length=1, max_length=12)
     mission_status: str = "planned"
     budget_millions: float = Field(ge=1.0, le=10000.0)
 
     @model_validator(mode="after")
-    def validate(self):
+    def validate(self) -> "SpaceMission":
         if not self.mission_id.startswith("M"):
             raise ValueError('Mission ID must start with "M"')
 
@@ -42,8 +46,9 @@ class SpaceMission(BaseModel):
             raise ValueError("Must have at least one Commander or Captain")
 
         if self.duration_days > 365:
-            expes = [exp for exp in self.crew if exp.years_experience >= 5]
-            if len(expes) < len(self.crew) // 2:
+            experienced_crew = [exp for exp in self.crew
+                                if exp.years_experience >= 5]
+            if len(experienced_crew) < len(self.crew) // 2:
                 raise ValueError("Long missions (> 365 days) need "
                                  "50% experienced crew (5+ years)")
 
@@ -53,7 +58,7 @@ class SpaceMission(BaseModel):
         return self
 
 
-def main():
+def main() -> None:
     crew_members = [
         CrewMember(member_id="AC01", name="Sarah Connor", rank=Rank.commander,
                    age=35, specialization="Mission Command",
@@ -123,5 +128,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception as e:
-        print(f"{e.__class__.__name__}: {e}")
+    except ValidationError as e:
+        for err in e.errors():
+            print(err["msg"])

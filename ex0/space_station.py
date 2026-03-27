@@ -1,6 +1,10 @@
-from pydantic import BaseModel, Field, ValidationError
-from datetime import datetime
-from typing import Optional
+try:
+    from datetime import datetime
+    from pydantic import BaseModel, Field, ValidationError
+    from typing import Optional
+except (ImportError, ModuleNotFoundError):
+    print("pydantic needs to be installed")
+    exit(1)
 
 
 class SpaceStation(BaseModel):
@@ -14,7 +18,7 @@ class SpaceStation(BaseModel):
     notes: Optional[str] = Field(max_length=200)
 
 
-def main():
+def main() -> None:
     try:
         space_station = SpaceStation(
                                     station_id="ISS001",
@@ -59,4 +63,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except ValidationError as e:
+        for err in e.errors():
+            print(err["msg"])
